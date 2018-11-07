@@ -1,0 +1,2 @@
+del /S /Q "c:\tmp\cpp" || goto :error
+java -jar codegen\swagger-codegen-cli-2.3.0.jar generate -i spec\asposeforcloud_word.json -l cpprest -t codegen\Templates\cpp -o c:/tmp/cpp/ -c codegen\config.json || goto :error
