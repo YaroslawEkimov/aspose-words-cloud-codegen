@@ -49,11 +49,11 @@ using namespace {{modelNamespace}};
 }
 
 {{#operation}}
-pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{classname}}::{{operationId}}({{#allParams}}{{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
+pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{classname}}::{{operationId}}(std::shared_ptr<{{operationId}}Request> request)
 {
 {{#allParams}}{{#required}}{{^isPrimitiveType}}{{^isContainer}}
     // verify the required parameter '{{paramName}}' is set
-    if ({{paramName}} == nullptr)
+    if (request->{{paramName}} == nullptr)
     {
         throw ApiException(400, utility::conversions::to_string_t("Missing required parameter '{{paramName}}' when calling {{classname}}->{{operationId}}"));
     }
@@ -61,7 +61,7 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
 
     std::shared_ptr<ApiConfiguration> apiConfiguration( m_ApiClient->getConfiguration() );
     utility::string_t path = utility::conversions::to_string_t("{{{path}}}");
-    {{#pathParams}}boost::replace_all(path, utility::conversions::to_string_t("{") + utility::conversions::to_string_t("{{baseName}}") + utility::conversions::to_string_t("}"), ApiClient::parameterToString({{{paramName}}}));
+    {{#pathParams}}boost::replace_all(path, utility::conversions::to_string_t("{") + utility::conversions::to_string_t("{{baseName}}") + utility::conversions::to_string_t("}"), ApiClient::parameterToString(request->{{paramName}}));
     {{/pathParams}}
 
     std::map<utility::string_t, utility::string_t> queryParams;
@@ -130,36 +130,36 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
     {{#required}}
         {{^isPrimitiveType}}
         {{^isContainer}}
-    if ({{paramName}} != nullptr)
+    if (request->{{paramName}} != nullptr)
         {{/isContainer}}
         {{/isPrimitiveType}}
     {{/required}}
     {{^required}}
         {{^isPrimitiveType}}
         {{^isContainer}}
-    if ({{paramName}} && *{{paramName}} != nullptr)
+    if (request->{{paramName}} && *(request->{{paramName}}) != nullptr)
         {{/isContainer}}
         {{/isPrimitiveType}}
         {{#isPrimitiveType}}
-    if ({{paramName}})
+    if (request->{{paramName}})
         {{/isPrimitiveType}}
         {{#isContainer}}
-    if ({{paramName}})
+    if (request->{{paramName}})
         {{/isContainer}}
     {{/required}}
     {
         {{#isQueryParam}}
-        queryParams[utility::conversions::to_string_t("{{baseName}}")] = ApiClient::parameterToString({{^required}}*{{/required}}{{paramName}});
+        queryParams[utility::conversions::to_string_t("{{baseName}}")] = ApiClient::parameterToString({{^required}}*{{/required}}(request->{{paramName}}));
         {{/isQueryParam}}
         {{#isHeaderParam}}
-        headerParams[utility::conversions::to_string_t("{{baseName}}")] = ApiClient::parameterToString({{^required}}*{{/required}}{{paramName}});
+        headerParams[utility::conversions::to_string_t("{{baseName}}")] = ApiClient::parameterToString({{^required}}*{{/required}}(request->{{paramName}}));
         {{/isHeaderParam}}
         {{#isFormParam}}
         {{#isFile}}
-        fileParams[ utility::conversions::to_string_t("{{baseName}}") ] = {{^required}}*{{/required}}{{paramName}};
+        fileParams[ utility::conversions::to_string_t("{{baseName}}") ] = {{^required}}*{{/required}}(request->{{paramName}});
         {{/isFile}}
         {{^isFile}}
-        formParams[ utility::conversions::to_string_t("{{baseName}}") ] = ApiClient::parameterToString({{^required}}*{{/required}}{{paramName}});
+        formParams[ utility::conversions::to_string_t("{{baseName}}") ] = ApiClient::parameterToString({{^required}}*{{/required}}(request->{{paramName}}));
         {{/isFile}}
         {{/isFormParam}}
     }
@@ -178,13 +178,13 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
         web::json::value json;
 
         {{#isPrimitiveType}}
-        json = ModelBase::toJson({{paramName}});
+        json = ModelBase::toJson(request->{{paramName}});
         {{/isPrimitiveType}}
         {{^isPrimitiveType}}
         {{#isListContainer}}
         {
             std::vector<web::json::value> jsonArray;
-            for( auto& item : {{paramName}} )
+            for( auto& item : request->{{paramName}} )
             {
                 {{#items.isPrimitiveType}}jsonArray.push_back(ModelBase::toJson(item));
                 {{/items.isPrimitiveType}}{{^items.isPrimitiveType}}{{#items.isString}}jsonArray.push_back(ModelBase::toJson(item));
@@ -195,9 +195,9 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
             json = web::json::value::array(jsonArray);
         }
         {{/isListContainer}}
-        {{^isListContainer}}{{#required}}json = ModelBase::toJson({{paramName}});
-        {{/required}}{{^required}}if ({{paramName}})
-            json = ModelBase::toJson(*{{paramName}});{{/required}}
+        {{^isListContainer}}{{#required}}json = ModelBase::toJson(request->{{paramName}});
+        {{/required}}{{^required}}if (request->{{paramName}})
+            json = ModelBase::toJson(*(request->{{paramName}}));{{/required}}
         {{/isListContainer}}
         {{/isPrimitiveType}}
 
@@ -211,13 +211,13 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
         {{#bodyParam}}
         std::shared_ptr<MultipartFormData> multipart(new MultipartFormData);
         {{#isPrimitiveType}}
-        multipart->add(ModelBase::toHttpContent(L"{{paramName}}", {{paramName}}));
+        multipart->add(ModelBase::toHttpContent(L"{{paramName}}", request->{{paramName}}));
         {{/isPrimitiveType}}
         {{^isPrimitiveType}}
         {{#isListContainer}}
         {
             std::vector<web::json::value> jsonArray;
-            for( auto& item : {{paramName}} )
+            for( auto& item : request->{{paramName}} )
             {
                 {{#items.isPrimitiveType}}jsonArray.push_back(ModelBase::toJson(item));
                 {{/items.isPrimitiveType}}{{^items.isPrimitiveType}}{{#items.isString}}jsonArray.push_back(ModelBase::toJson(item));
@@ -227,10 +227,10 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
             }
             multipart->add(ModelBase::toHttpContent(utility::conversions::to_string_t("{{paramName}}"), web::json::value::array(jsonArray), utility::conversions::to_string_t("application/json")));
         }{{/isListContainer}}
-        {{^isListContainer}}{{#isString}}multipart->add(ModelBase::toHttpContent(utility::conversions::to_string_t("{{paramName}}"), {{paramName}}));
-        {{/isString}}{{^isString}}if({{^required}}{{paramName}} && (*{{paramName}}){{/required}}{{#required}}{{paramName}}{{/required}}.get())
+        {{^isListContainer}}{{#isString}}multipart->add(ModelBase::toHttpContent(utility::conversions::to_string_t("{{paramName}}"), request->{{paramName}}));
+        {{/isString}}{{^isString}}if({{^required}}request->{{paramName}} && (*(request->{{paramName}})){{/required}}{{#required}}request->{{paramName}}{{/required}}.get())
         {
-            {{^required}}(*{{/required}}{{paramName}}{{^required}}){{/required}}->toMultipart(multipart, utility::conversions::to_string_t("{{paramName}}"));
+            {{^required}}(*{{/required}}(request->{{paramName}}){{^required}}){{/required}}->toMultipart(multipart, utility::conversions::to_string_t("{{paramName}}"));
         }
         {{/isString}}
         {{/isListContainer}}
@@ -381,3 +381,5 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
 {{/apiNamespaceDeclarations}}
 
 {{/operations}}
+
+{{>requestModel_source}}

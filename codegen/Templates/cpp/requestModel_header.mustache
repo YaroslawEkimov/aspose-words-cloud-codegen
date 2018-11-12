@@ -1,0 +1,29 @@
+{{#operations}}
+{{#operation}}
+//{{operationId}}Request.h
+#include "cpprest/details/basic_types.h"
+#undef U
+#include <boost/optional.hpp>
+
+{{#modelNamespaceDeclarations}}
+namespace {{this}} {
+{{/modelNamespaceDeclarations}}
+
+class {{operationId}}Request{
+    public: 
+    {{operationId}}Request(
+        {{#allParams}}
+        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}{{#hasMore}},{{/hasMore}}
+        {{/allParams}});
+
+    public:
+        {{#allParams}}
+        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}};
+        {{/allParams}}
+};
+
+{{#modelNamespaceDeclarations}}
+}
+{{/modelNamespaceDeclarations}}
+{{/operation}}
+{{/operations}}

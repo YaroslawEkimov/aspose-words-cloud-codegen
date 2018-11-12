@@ -10,11 +10,14 @@
 {{{defaultInclude}}}
 #include "../ApiClient.h"
 
+{{#operation}}
+#include "requests/{{operationId}}Request.h"
+{{/operation}}
+
 {{#imports}}{{{import}}}
 {{/imports}}
 #undef U
 #include <boost/optional.hpp>
-
 {{#apiNamespaceDeclarations}}
 namespace {{this}} {
 {{/apiNamespaceDeclarations}}
@@ -24,25 +27,25 @@ using namespace {{modelNamespace}};
 class {{declspec}} {{classname}}
 {
 public:
-    {{classname}}( std::shared_ptr<ApiClient> apiClient );
-    virtual ~{{classname}}();
     {{#operation}}
-    /// <summary>
-    /// {{summary}}
-    /// </summary>
-    /// <remarks>
-    /// {{notes}}
-    /// </remarks>
+    ///<summary>
+    ///{{summary}}
+    ///</summary>
+    ///<remarks>
+    ///{{notes}}
+    ///</remarks>
     {{#allParams}}
     /// <param name="{{paramName}}">{{description}}{{^required}} (optional{{#defaultValue}}, default to {{.}}{{/defaultValue}}){{/required}}</param>
     {{/allParams}}
     pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {{operationId}}(
-        {{#allParams}}
-        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}{{#hasMore}},{{/hasMore}}
-        {{/allParams}}
-    );
+        std::shared_ptr<{{operationId}}Request> request
+        );
     {{/operation}}
 
+public:
+    {{classname}}( std::shared_ptr<ApiClient> apiClient );
+    virtual ~{{classname}}();
+    
 protected:
     std::shared_ptr<ApiClient> m_ApiClient;
 };
@@ -54,3 +57,5 @@ protected:
 #endif /* {{apiHeaderGuardPrefix}}_{{classname}}_H_ */
 
 {{/operations}}
+
+{{>requestModel_header}}
