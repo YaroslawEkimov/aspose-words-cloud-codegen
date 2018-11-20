@@ -50,8 +50,7 @@ if( NOT DEFINED CPPREST_ROOT )
 endif( NOT DEFINED CPPREST_ROOT )
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-add_subdirectory(../libs/gtest /gtest)
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+add_subdirectory(../libs/gtest ${PROJECT_BINARY_DIR}/gtest)
 
 #SUPPORTING FILES
 set(SUPPORTING_FILES  "ApiClient" "ApiConfiguration" "ApiException" "HttpContent" "IHttpBody" "JsonBody" "ModelBase" "MultipartFormData" "Object")
@@ -60,6 +59,7 @@ file(GLOB SOURCE_FILES  "api/*"  "model/* "model/requests/*)
 
 add_library(${PROJECT_NAME} ${SUPPORTING_FILES} ${SOURCE_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR} api model ${CPPREST_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 # https://cmake.org/cmake/help/latest/module/FindBoost.html 
 target_link_libraries(${PROJECT_NAME} Boost::boost Boost::thread Boost::system Boost::regex Boost::date_time Boost::program_options Boost::filesystem)
