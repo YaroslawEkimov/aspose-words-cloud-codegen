@@ -50,7 +50,7 @@ if( NOT DEFINED CPPREST_ROOT )
 endif( NOT DEFINED CPPREST_ROOT )
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-add_subdirectory(${PROJECT_SOURCE_DIR}/../thirdparty/googletest /thirdparty)
+add_subdirectory(../libs/gtest /gtest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 #SUPPORTING FILES
@@ -65,4 +65,4 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR} api mode
 target_link_libraries(${PROJECT_NAME} Boost::boost Boost::thread Boost::system Boost::regex Boost::date_time Boost::program_options Boost::filesystem)
 
 enable_testing()
-add_subdirectory(../tests /tests)
+add_subdirectory(../tests ${PROJECT_BINARY_DIR}/tests)
