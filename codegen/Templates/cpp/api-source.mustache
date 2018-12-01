@@ -36,7 +36,25 @@
 {{#apiNamespaceDeclarations}}
 namespace {{this}} {
 {{/apiNamespaceDeclarations}}
+utility::string_t replacePathParameter(utility::string_t path, utility::string_t paramName, utility::string_t value) {
+					if (!value.empty()) {
+						boost::replace_all(path, utility::conversions::to_string_t("{") + paramName + utility::conversions::to_string_t("}"),
+							ApiClient::parameterToString(value));
+					}
+					else {
+						boost::replace_all(path, utility::conversions::to_string_t("/{") + paramName + utility::conversions::to_string_t("}"),
+							utility::conversions::to_string_t(value));
+					}
+					return path;
+				}
 
+template<class T> 
+utility::string_t extractOptional(boost::optional<T> parameter) {
+	if (parameter.has_value())
+		return ApiClient::parameterToString(parameter.value());
+	else
+		return utility::conversions::to_string_t("");
+}
 using namespace {{modelNamespace}};
 
 {{classname}}::{{classname}}( std::shared_ptr<ApiClient> apiClient )
@@ -60,14 +78,23 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
 {{/isContainer}}{{/isPrimitiveType}}{{/required}}{{/allParams}}
 
     std::shared_ptr<ApiConfiguration> apiConfiguration( m_ApiClient->getConfiguration() );
-    utility::string_t path = utility::conversions::to_string_t("{{{path}}}");
-    {{#pathParams}}boost::replace_all(path, utility::conversions::to_string_t("{") + utility::conversions::to_string_t("{{baseName}}") + utility::conversions::to_string_t("}"), ApiClient::parameterToString(request->{{paramName}}));
-    {{/pathParams}}
+    utility::string_t bPath = L"/" + apiConfiguration->getApiVersion() + utility::conversions::to_string_t("{{{path}}}"),
+    path = bPath;
+    {{#allParams}}
+    {{#isPrimitiveType}}
+    {{#required}}
+    path = replacePathParameter(path, utility::conversions::to_string_t("{{paramName}}"), ApiClient::parameterToString(request->{{paramName}}));
+    {{/required}}
+    {{^required}}
+    path = replacePathParameter(path, utility::conversions::to_string_t("{{paramName}}"), extractOptional(request->{{paramName}}));
+    {{/required}}
+    {{/isPrimitiveType}}
+    {{/allParams}}
 
     std::map<utility::string_t, utility::string_t> queryParams;
     std::map<utility::string_t, utility::string_t> headerParams( apiConfiguration->getDefaultHeaders() );
     std::map<utility::string_t, utility::string_t> formParams;
-    std::map<utility::string_t, std::shared_ptr<HttpContent>> fileParams;
+    std::vector<std::pair<utility::string_t, std::shared_ptr<HttpContent>>> fileParams;
 
     std::unordered_set<utility::string_t> responseHttpContentTypes;
     {{#produces}}
@@ -141,7 +168,7 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
         {{/isContainer}}
         {{/isPrimitiveType}}
         {{#isPrimitiveType}}
-    if (request->{{paramName}})
+    if (request->{{paramName}} && bPath.find(utility::conversions::to_string_t("{{paramName}}")) == std::string::npos)
         {{/isPrimitiveType}}
         {{#isContainer}}
     if (request->{{paramName}})
@@ -156,7 +183,7 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
         {{/isHeaderParam}}
         {{#isFormParam}}
         {{#isFile}}
-        fileParams[ utility::conversions::to_string_t("{{baseName}}") ] = {{^required}}*{{/required}}(request->{{paramName}});
+        fileParams.push_back(make_pair(utility::conversions::to_string_t("{{baseName}}"), {{^required}}*{{/required}}(request->{{paramName}})));
         {{/isFile}}
         {{^isFile}}
         formParams[ utility::conversions::to_string_t("{{baseName}}") ] = ApiClient::parameterToString({{^required}}*{{/required}}(request->{{paramName}}));
@@ -288,18 +315,6 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
             throw ApiException(response.status_code()
                 , utility::conversions::to_string_t("error calling {{operationId}}: ") + response.reason_phrase()
                 , std::make_shared<std::stringstream>(response.extract_utf8string(true).get()));
-        }
-
-        // check response content type
-        if(response.headers().has(utility::conversions::to_string_t("Content-Type")))
-        {
-            utility::string_t contentType = response.headers()[utility::conversions::to_string_t("Content-Type")];
-            if( contentType.find(responseHttpContentType) == std::string::npos )
-            {
-                throw ApiException(500
-                    , utility::conversions::to_string_t("error calling {{operationId}}: unexpected response type: ") + contentType
-                    , std::make_shared<std::stringstream>(response.extract_utf8string(true).get()));
-            }
         }
 
         {{#vendorExtensions.x-codegen-response-ishttpcontent}}

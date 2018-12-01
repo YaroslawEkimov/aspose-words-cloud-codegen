@@ -160,7 +160,6 @@ void {{classname}}::fromJson(web::json::value& val)
     {{#isPrimitiveType}}
     {{^isListContainer}}
     {{^isMapContainer}}
-    {{^required}}
     if(val.has_field(utility::conversions::to_string_t("{{baseName}}")))
     {
         web::json::value& fieldValue = val[utility::conversions::to_string_t("{{baseName}}")];
@@ -169,10 +168,6 @@ void {{classname}}::fromJson(web::json::value& val)
             {{setter}}(ModelBase::{{baseType}}FromJson(fieldValue));
         }
     }
-    {{/required}}
-    {{#required}}
-    {{setter}}(ModelBase::{{baseType}}FromJson(val[utility::conversions::to_string_t("{{baseName}}")]));
-    {{/required}}
     {{/isMapContainer}}
     {{/isListContainer}}
     {{/isPrimitiveType}}
@@ -181,7 +176,8 @@ void {{classname}}::fromJson(web::json::value& val)
         m_{{name}}.clear();
         std::vector<web::json::value> jsonArray;
         {{^required}}
-        if(val.has_field(utility::conversions::to_string_t("{{baseName}}")))
+        if(val.has_field(utility::conversions::to_string_t("{{baseName}}")) 
+                            && !val[utility::conversions::to_string_t("{{baseName}}")].is_null())
         {
         {{/required}}
         for( auto& item : val[utility::conversions::to_string_t("{{baseName}}")].as_array() )
