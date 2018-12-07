@@ -36,6 +36,58 @@
 {{#apiNamespaceDeclarations}}
 namespace {{this}} {
 {{/apiNamespaceDeclarations}}
+
+std::shared_ptr<FormField> deserializeFormField(web::json::value json) {
+					std::shared_ptr<FormField> field;
+					if (json.has_field(utility::conversions::to_string_t("Checked")))
+						field.reset(new FormFieldCheckbox());
+
+					if (json.has_field(utility::conversions::to_string_t("TextInputFormat")) ||
+						json.has_field(utility::conversions::to_string_t("TextInputDefault")))
+						field.reset(new FormFieldTextInput());
+
+					if (json.has_field(utility::conversions::to_string_t("DropDownItems")))
+						field.reset(new FormFieldDropDown());
+
+					if (!field) throw new std::exception("Wrong json provided for FormFieldResponse");
+					field->fromJson(json);
+					return field;
+				}
+				void postInitializeResponse(web::json::value json, void* response) {
+					if (json.has_field(utility::conversions::to_string_t("FormField")))
+					{
+						FormFieldResponse* fieldResponse = (FormFieldResponse*)response;
+						web::json::value formField = json[utility::conversions::to_string_t("FormField")];
+						fieldResponse->setFormField(deserializeFormField(formField));
+					}
+
+					if (json.has_field(utility::conversions::to_string_t("FormFields")))
+					{
+						FormFieldsResponse* fieldResponse = (FormFieldsResponse*)response;
+						web::json::value formField = json[utility::conversions::to_string_t("FormFields")];
+						std::shared_ptr<FormFieldCollection> fields(new FormFieldCollection);
+
+						std::vector<std::shared_ptr<FormField>> list;
+						if (formField.has_field(utility::conversions::to_string_t("List"))
+							&& !formField[utility::conversions::to_string_t("List")].is_null())
+						{
+							for (auto& item : formField[utility::conversions::to_string_t("List")].as_array())
+							{
+								if (item.is_null())
+								{
+									list.push_back(std::shared_ptr<FormField>(nullptr));
+								}
+								else
+								{	
+									list.push_back(deserializeFormField(item));
+								}
+							}
+						}
+
+                        fields->setList(list);
+                        fieldResponse->setFormFields(fields);
+					}
+				}
 utility::string_t replacePathParameter(utility::string_t path, utility::string_t paramName, utility::string_t value) {
 					if (!value.empty()) {
 						boost::replace_all(path, utility::conversions::to_string_t("{") + paramName + utility::conversions::to_string_t("}"),
@@ -368,7 +420,10 @@ pplx::task<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/r
             {{/isMapContainer}}{{^isMapContainer}}{{#vendorExtensions.x-codegen-response.isPrimitiveType}}{{#vendorExtensions.x-codegen-response.items.datatype}}result = ModelBase::{{vendorExtensions.x-codegen-response.items.datatype}}FromJson(json);
             {{/vendorExtensions.x-codegen-response.items.datatype}}{{^vendorExtensions.x-codegen-response.items.datatype}}result = ModelBase::{{vendorExtensions.x-codegen-response.datatype}}FromJson(json);
             {{/vendorExtensions.x-codegen-response.items.datatype}}{{/vendorExtensions.x-codegen-response.isPrimitiveType}}{{^vendorExtensions.x-codegen-response.isPrimitiveType}}{{#vendorExtensions.x-codegen-response.isString}}result = ModelBase::stringFromJson(json);
-            {{/vendorExtensions.x-codegen-response.isString}}{{^vendorExtensions.x-codegen-response.isString}}result->fromJson(json);{{/vendorExtensions.x-codegen-response.isString}}{{/vendorExtensions.x-codegen-response.isPrimitiveType}}{{/isMapContainer}}{{/isListContainer}}
+            {{/vendorExtensions.x-codegen-response.isString}}{{^vendorExtensions.x-codegen-response.isString}}
+            result->fromJson(json);
+            postInitializeResponse(json, result.get());
+            {{/vendorExtensions.x-codegen-response.isString}}{{/vendorExtensions.x-codegen-response.isPrimitiveType}}{{/isMapContainer}}{{/isListContainer}}
         }{{#vendorExtensions.x-codegen-response.isString}}
         else if(responseHttpContentType == utility::conversions::to_string_t("text/plain"))
         {
