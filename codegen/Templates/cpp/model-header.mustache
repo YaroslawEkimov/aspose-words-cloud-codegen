@@ -73,7 +73,12 @@ public:
     {{/isNotContainer}}{{^required}}bool {{nameInCamelCase}}IsSet() const;
     void unset{{name}}();
     {{/required}}
+    {{^isNotContainer}}
+    void {{setter}}({{{datatype}}} const& value);
+    {{/isNotContainer}}
+    {{#isNotContainer}}
     void {{setter}}({{{datatype}}} value);
+    {{/isNotContainer}}
     {{/isInherited}}
     {{/vars}}
 

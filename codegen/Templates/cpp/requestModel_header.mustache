@@ -34,7 +34,7 @@ namespace {{this}} {
 
 class {{operationId}}Request{
     public: 
-    {{operationId}}Request(
+    {{^allParams.1}}explicit{{/allParams.1}} {{operationId}}Request(
         {{#allParams}}
         {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}{{#hasMore}},{{/hasMore}}
         {{/allParams}});

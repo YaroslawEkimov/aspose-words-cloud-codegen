@@ -68,7 +68,7 @@ public:
     {{/operation}}
 
 public:
-    {{classname}}( std::shared_ptr<ApiClient> apiClient );
+    explicit {{classname}}( std::shared_ptr<ApiClient> apiClient );
     virtual ~{{classname}}();
     
 protected:

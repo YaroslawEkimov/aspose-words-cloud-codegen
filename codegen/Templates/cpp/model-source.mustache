@@ -92,10 +92,11 @@ web::json::value {{classname}}::toJson() const
     {{#isListContainer}}
     {
         std::vector<web::json::value> jsonArray;
-        for( auto& item : m_{{name}} )
-        {
-            jsonArray.push_back(ModelBase::toJson(item));
-        }
+        std::transform(m_{{name}}.begin(), m_{{name}}.end(), std::back_inserter(jsonArray),
+			[&](auto item) {
+			return ModelBase::toJson(item);
+		});
+        
         {{#required}}
         val[utility::conversions::to_string_t("{{baseName}}")] = web::json::value::array(jsonArray);
         {{/required}}
@@ -110,13 +111,13 @@ web::json::value {{classname}}::toJson() const
     {{#isMapContainer}}
     {
         std::vector<web::json::value> jsonArray;
-        for( auto& item : m_{{name}} )
-        {
-            web::json::value tmp = web::json::value::object();
+        std::transform(m_{{name}}.begin(), m_{{name}}.end(), std::back_inserter(jsonArray),
+			[](auto item) {
+                web::json::value tmp = web::json::value::object();
             tmp[utility::conversions::to_string_t("key")] = ModelBase::toJson(item.first);
             tmp[utility::conversions::to_string_t("value")] = ModelBase::toJson(item.second);
-            jsonArray.push_back(tmp);
-        }
+			return tmp;
+		});
         {{#required}}
         val[utility::conversions::to_string_t("{{baseName}}")] = web::json::value::array(jsonArray);
         {{/required}}
@@ -174,40 +175,40 @@ void {{classname}}::fromJson(web::json::value& val)
     {{#isListContainer}}
     {
         m_{{name}}.clear();
-        std::vector<web::json::value> jsonArray;
         {{^required}}
         if(val.has_field(utility::conversions::to_string_t("{{baseName}}")) 
                             && !val[utility::conversions::to_string_t("{{baseName}}")].is_null())
         {
         {{/required}}
-        for( auto& item : val[utility::conversions::to_string_t("{{baseName}}")].as_array() )
-        {
+        auto arr = val[utility::conversions::to_string_t("{{baseName}}")].as_array();
+        std::transform(arr.begin(), arr.end(), std::back_inserter(m_{{name}}), [&](auto item){
             {{#items.isPrimitiveType}}
-            m_{{name}}.push_back(ModelBase::{{items.baseType}}FromJson(item));
+            return ModelBase::{{items.baseType}}FromJson(item);
             {{/items.isPrimitiveType}}
             {{^items.isPrimitiveType}}
             {{#items.isString}}
-            m_{{name}}.push_back(ModelBase::stringFromJson(item));
+            return ModelBase::stringFromJson(item);
             {{/items.isString}}
             {{^items.isString}}
             {{#items.isDateTime}}
-            m_{{name}}.push_back(ModelBase::dateFromJson(item));
+            return ModelBase::dateFromJson(item);
             {{/items.isDateTime}}
             {{^items.isDateTime}}
             if(item.is_null())
             {
-                m_{{name}}.push_back( {{{items.datatype}}}(nullptr) );
+                return {{{items.datatype}}}(nullptr);
             }
             else
             {
                 {{{items.datatype}}} newItem({{{items.defaultValue}}});
                 newItem->fromJson(item);
-                m_{{name}}.push_back( newItem );
+                return newItem;
             }
             {{/items.isDateTime}}
             {{/items.isString}}
             {{/items.isPrimitiveType}}
-        }
+        });
+
         {{^required}}
         }
         {{/required}}
@@ -216,44 +217,44 @@ void {{classname}}::fromJson(web::json::value& val)
     {{#isMapContainer}}
     {
         m_{{name}}.clear();
-        std::vector<web::json::value> jsonArray;
         {{^required}}
         if(val.has_field(utility::conversions::to_string_t("{{baseName}}")))
         {
         {{/required}}
-        for( auto& item : val[utility::conversions::to_string_t("{{baseName}}")].as_array() )
-        {  
+        auto arr = val[utility::conversions::to_string_t("{{baseName}}")].as_array();
+        std::transform(arr.begin(), arr.end(), std::back_inserter(m_{{name}}),
+        [&](auto& item){
             utility::string_t key;
             if(item.has_field(utility::conversions::to_string_t("key")))
             {
                 key = ModelBase::stringFromJson(item[utility::conversions::to_string_t("key")]);
             }
             {{#items.isPrimitiveType}}
-            m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::{{items.baseType}}FromJson(item[utility::conversions::to_string_t("value")])));
+            return std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::{{items.baseType}}FromJson(item[utility::conversions::to_string_t("value")]));
             {{/items.isPrimitiveType}}
             {{^items.isPrimitiveType}}
             {{#items.isString}}
-            m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::stringFromJson(item[utility::conversions::to_string_t("value")])));
+            return std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::stringFromJson(item[utility::conversions::to_string_t("value")]));
             {{/items.isString}}
             {{^items.isString}}
             {{#items.isDateTime}}
-            m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::dateFromJson(item[utility::conversions::to_string_t("value")])));
+            return std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::dateFromJson(item[utility::conversions::to_string_t("value")]));
             {{/items.isDateTime}}
             {{^items.isDateTime}}
             if(item.is_null())
             {
-                m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, {{{items.datatype}}}(nullptr) ));
+                return std::pair<utility::string_t,{{{items.datatype}}}>( key, {{{items.datatype}}}(nullptr) );
             }
             else
             {
                 {{{items.datatype}}} newItem({{{items.defaultValue}}});
                 newItem->fromJson(item[utility::conversions::to_string_t("value")]);
-                m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, newItem ));
+                return std::pair<utility::string_t,{{{items.datatype}}}>( key, newItem );
             }
             {{/items.isDateTime}}
             {{/items.isString}}
             {{/items.isPrimitiveType}}
-        }
+        });
         {{^required}}
         }
         {{/required}}
@@ -339,10 +340,9 @@ void {{classname}}::toMultipart(std::shared_ptr<MultipartFormData> multipart, co
     {{#isListContainer}}
     {
         std::vector<web::json::value> jsonArray;
-        for( auto& item : m_{{name}} )
-        {
-            jsonArray.push_back(ModelBase::toJson(item));
-        }
+        std::transform(m_{{name}}.begin(), m_{{name}}.end(), std::back_inserter(jsonArray), [&](auto& item){
+            return ModelBase::toJson(item);
+        });
         {{#required}}multipart->add(ModelBase::toHttpContent(namePrefix + utility::conversions::to_string_t("{{baseName}}"), web::json::value::array(jsonArray), utility::conversions::to_string_t("application/json")));
         {{/required}}{{^required}}
         if(jsonArray.size() > 0)
@@ -355,13 +355,12 @@ void {{classname}}::toMultipart(std::shared_ptr<MultipartFormData> multipart, co
     {{#isMapContainer}}
     {
         std::vector<web::json::value> jsonArray;
-        for( auto& item : m_{{name}} )
-        {
+        std::transform(m_{{name}}.begin(), m_{{name}}.end(), std::back_inserter(jsonArray), [&](auto& item) {
             web::json::value tmp = web::json::value::object();
             tmp[utility::conversions::to_string_t("key")] = ModelBase::toJson(item.first);
             tmp[utility::conversions::to_string_t("value")] = ModelBase::toJson(item.second);
-            jsonArray.push_back(tmp);
-        }
+            return tmp;
+        });
         {{#required}}multipart->add(ModelBase::toHttpContent(namePrefix + utility::conversions::to_string_t("{{baseName}}"), web::json::value::array(jsonArray), utility::conversions::to_string_t("application/json")));
         {{/required}}{{^required}}
         if(jsonArray.size() > 0)
@@ -442,35 +441,34 @@ void {{classname}}::fromMultiPart(std::shared_ptr<MultipartFormData> multipart, 
         {
         {{/required}}
 
-        web::json::value jsonArray = web::json::value::parse(ModelBase::stringFromHttpContent(multipart->getContent(utility::conversions::to_string_t("{{baseName}}"))));
-        for( auto& item : jsonArray.as_array() )
-        {
+        web::json::array jsonArray = web::json::value::parse(ModelBase::stringFromHttpContent(multipart->getContent(utility::conversions::to_string_t("{{baseName}}")))).as_array();
+        std::transform(jsonArray.begin(), jsonArray.end(), std::back_inserter(m_{{name}}), [&](auto& item) {
             {{#isPrimitiveType}}
-            m_{{name}}.push_back(ModelBase::{{items.baseType}}FromJson(item));
+            return ModelBase::{{items.baseType}}FromJson(item);
             {{/isPrimitiveType}}
             {{^isPrimitiveType}}
             {{#items.isString}}
-            m_{{name}}.push_back(ModelBase::stringFromJson(item));
+            return ModelBase::stringFromJson(item);
             {{/items.isString}}
             {{^items.isString}}
             {{#items.isDateTime}}
-            m_{{name}}.push_back(ModelBase::dateFromJson(item));
+            return ModelBase::dateFromJson(item);
             {{/items.isDateTime}}
             {{^items.isDateTime}}
             if(item.is_null())
             {
-                m_{{name}}.push_back( {{{items.datatype}}}(nullptr) );
+                return {{{items.datatype}}}(nullptr) ;
             }
             else
             {
                 {{{items.datatype}}} newItem({{{items.defaultValue}}});
                 newItem->fromJson(item);
-                m_{{name}}.push_back( newItem );
+                return newItem ;
             }
             {{/items.isDateTime}}
             {{/items.isString}}
             {{/isPrimitiveType}}
-        }
+        });
         {{^required}}
         }
         {{/required}}
@@ -484,40 +482,40 @@ void {{classname}}::fromMultiPart(std::shared_ptr<MultipartFormData> multipart, 
         {
         {{/required}}
 
-        web::json::value jsonArray = web::json::value::parse(ModelBase::stringFromHttpContent(multipart->getContent(utility::conversions::to_string_t("{{baseName}}"))));
-        for( auto& item : jsonArray.as_array() )
-        {
+        web::json::array jsonArray = web::json::value::parse(ModelBase::stringFromHttpContent(multipart->getContent(utility::conversions::to_string_t("{{baseName}}")))).as_array();
+        std::transform(jsonArray.begin(), jsonArray.end(), std::back_inserter(m_{{name}}), 
+        [&](auto& item) {
             utility::string_t key;
             if(item.has_field(utility::conversions::to_string_t("key")))
             {
                 key = ModelBase::stringFromJson(item[utility::conversions::to_string_t("key")]);
             }
             {{#items.isPrimitiveType}}
-            m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::{{items.baseType}}FromJson(item[utility::conversions::to_string_t("value")])));
+            return std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::{{items.baseType}}FromJson(item[utility::conversions::to_string_t("value")]));
             {{/items.isPrimitiveType}}
             {{^items.isPrimitiveType}}
             {{#items.isString}}
-            m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::stringFromJson(item[utility::conversions::to_string_t("value")])));
+            return std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::stringFromJson(item[utility::conversions::to_string_t("value")]));
             {{/items.isString}}
             {{^items.isString}}
             {{#items.isDateTime}}
-            m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::dateFromJson(item[utility::conversions::to_string_t("value")])));
+            return std::pair<utility::string_t,{{{items.datatype}}}>( key, ModelBase::dateFromJson(item[utility::conversions::to_string_t("value")]));
             {{/items.isDateTime}}
             {{^items.isDateTime}}
             if(item.is_null())
             {
-                m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, {{{items.datatype}}}(nullptr) ));
+                return std::pair<utility::string_t,{{{items.datatype}}}>( key, {{{items.datatype}}}(nullptr) );
             }
             else
             {
                 {{{items.datatype}}} newItem({{{items.defaultValue}}});
                 newItem->fromJson(item[utility::conversions::to_string_t("value")]);
-                m_{{name}}.insert(std::pair<utility::string_t,{{{items.datatype}}}>( key, newItem ));
+                return std::pair<utility::string_t,{{{items.datatype}}}>( key, newItem );
             }
             {{/items.isDateTime}}
             {{/items.isString}}
             {{/items.isPrimitiveType}}
-        }
+        });
         {{^required}}
         }
         {{/required}}
@@ -581,7 +579,7 @@ void {{classname}}::fromMultiPart(std::shared_ptr<MultipartFormData> multipart, 
     return m_{{name}};
 }
 
-void {{classname}}::{{setter}}({{{datatype}}} value)
+void {{classname}}::{{setter}}({{{datatype}}} const& value)
 {
     m_{{name}} = value;
     {{^required}}m_{{name}}IsSet = true;{{/required}}
