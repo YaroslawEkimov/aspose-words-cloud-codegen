@@ -31,12 +31,23 @@ namespace {{this}}{
 {{operationId}}Request::{{operationId}}Request(
       {{#allParams}}
         {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}{{#hasMore}},{{/hasMore}}
-        {{/allParams}})
-        {
-            {{#allParams}}
-            this->{{paramName}} = {{paramName}};
+        {{/allParams}}) {{#allParams.0}}: {{/allParams.0}}
+        {{#allParams}}
+            m_{{paramName}}({{paramName}}){{#hasMore}},{{/hasMore}}
             {{/allParams}}
+        {
+            
         }
+
+{{#allParams}}
+        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{operationId}}Request::get{{baseName}}() const
+        {
+            return m_{{paramName}};
+        }
+        void {{operationId}}Request::set{{baseName}}({{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}){
+            m_{{paramName}} = {{paramName}};
+        }
+{{/allParams}}
 
 {{#modelNamespaceDeclarations}}
 }

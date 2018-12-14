@@ -38,10 +38,14 @@ class {{operationId}}Request{
         {{#allParams}}
         {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}}{{#hasMore}},{{/hasMore}}
         {{/allParams}});
-
-    public:
         {{#allParams}}
-        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}};
+
+        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} get{{baseName}}() const;
+        void set{{baseName}}({{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} {{paramName}});
+        {{/allParams}}
+    private:
+        {{#allParams}}
+        {{^required}}boost::optional<{{/required}}{{{dataType}}}{{^required}}>{{/required}} m_{{paramName}};
         {{/allParams}}
 };
 
